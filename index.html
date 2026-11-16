@@ -27,16 +27,23 @@
 <iframe id="app" title="Portal do Vendedor" allow="clipboard-read; clipboard-write; web-share; fullscreen"
   src="https://script.google.com/macros/s/AKfycbxBzzrjY3ur7RDzm6goDDU8HZxKbexzJwA_xqTU9Gf2bV-dq_3lOD_TbjZ4qhNu7rvCbg/exec"></iframe>
 <script>
-  /* guarda o login do app nesta pagina (no iPhone o app perde o login ao fechar a aba) */
+  /* guarda o login e o ultimo estoque visto nesta pagina (no iPhone o app perde tudo ao fechar a aba) */
+  function daqui(w) {   /* so aceita mensagens de quadros que estao DENTRO desta pagina */
+    try { for (var i = 0; i < 6 && w; i++) { if (w === window) return i > 0; if (w === w.parent) return false; w = w.parent; } } catch (x) {}
+    return false;
+  }
   window.addEventListener('message', function (e) {
     if (!/^https:\/\/[a-z0-9-]+-script\.googleusercontent\.com$/.test(e.origin)) return;
-    var d = e.data || {}; if (!d.mbAuth) return;
+    if (!daqui(e.source)) return;
+    var d = e.data || {};
     try {
+      if (d.mbCache === 'set' && typeof d.dados === 'string' && d.dados.length < 2000000) { localStorage.setItem('mb_dados', d.dados); return; }
+      if (!d.mbAuth) return;
       if (d.mbAuth === 'set' && d.token) localStorage.setItem('mb_auth', JSON.stringify({ token: d.token, name: d.name || '', email: d.email || '' }));
-      else if (d.mbAuth === 'clear') localStorage.removeItem('mb_auth');
+      else if (d.mbAuth === 'clear') { localStorage.removeItem('mb_auth'); localStorage.removeItem('mb_dados'); }
       else if (d.mbAuth === 'get') {
         var v = {}; try { v = JSON.parse(localStorage.getItem('mb_auth') || '{}') || {}; } catch (x) {}
-        e.source.postMessage({ mbAuth: 'val', token: v.token || null, name: v.name || '', email: v.email || '' }, e.origin);
+        e.source.postMessage({ mbAuth: 'val', token: v.token || null, name: v.name || '', email: v.email || '', cache: v.token ? (localStorage.getItem('mb_dados') || '') : '' }, e.origin);
       }
     } catch (x) { if (d.mbAuth === 'get') e.source.postMessage({ mbAuth: 'val', token: null }, e.origin); }
   });
